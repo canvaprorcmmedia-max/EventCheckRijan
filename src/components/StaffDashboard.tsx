@@ -13,7 +13,9 @@ import {
   UserRound,
   CheckCircle2,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  Keyboard,
+  UserPlus
 } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '../lib/supabase'
@@ -40,6 +42,7 @@ type GuestRecord = {
   invitation_code: string
   invite_token: string
   status: string
+  checked_in_at?: string | null
 }
 
 type Props = {
@@ -154,6 +157,12 @@ export default function StaffDashboard({
     useState<AssignedEvent | null>(null)
 
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [checkInMode, setCheckInMode] = useState<'scan' | 'manual'>('scan')
+  const [manualName, setManualName] = useState('')
+  const [manualInstitution, setManualInstitution] = useState('')
+  const [manualCategory, setManualCategory] = useState('Reguler')
+  const [manualGroup, setManualGroup] = useState('')
+  const [manualLoading, setManualLoading] = useState(false)
   const [scannedGuest, setScannedGuest] =
     useState<GuestRecord | null>(null)
 
@@ -224,6 +233,39 @@ export default function StaffDashboard({
     )
   }
 
+  async function getCheckInTimestamp(eventId: string, guestId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('checked_in_at')
+      .eq('event_id', eventId)
+      .eq('guest_id', guestId)
+      .order('checked_in_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Gagal mengambil waktu check-in:', error.message)
+      return null
+    }
+
+    return data?.checked_in_at ?? null
+  }
+
+  function formatCheckInTime(value?: string | null) {
+    if (!value) return 'Waktu tidak tersedia'
+
+    return new Date(value).toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }) + ' WIB'
+  }
+
   function extractToken(qrValue: string) {
     const value = qrValue.trim()
 
@@ -289,7 +331,11 @@ export default function StaffDashboard({
       return
     }
 
-    const guest = data as GuestRecord
+    let guest = data as GuestRecord
+    if (guest.status === 'Hadir') {
+      const checkedInAt = await getCheckInTimestamp(selectedEvent.id, guest.id)
+      guest = { ...guest, checked_in_at: checkedInAt }
+    }
     setScannedGuest(guest)
 
     if (guest.status === 'Hadir') {
@@ -331,9 +377,11 @@ export default function StaffDashboard({
     }
 
     if (data?.already_checked_in) {
+      const checkedInAt = await getCheckInTimestamp(selectedEvent.id, scannedGuest.id)
       setScannedGuest({
         ...scannedGuest,
-        status: 'Hadir'
+        status: 'Hadir',
+        checked_in_at: checkedInAt
       })
 
       setScanMessage('Tamu ini sudah check-in sebelumnya.')
@@ -349,9 +397,11 @@ export default function StaffDashboard({
       return
     }
 
+    const checkedInAt = await getCheckInTimestamp(selectedEvent.id, scannedGuest.id)
     setScannedGuest({
       ...scannedGuest,
-      status: 'Hadir'
+      status: 'Hadir',
+      checked_in_at: checkedInAt
     })
 
     setScanMessage('Check-in berhasil! Kehadiran tamu telah tersimpan.')
@@ -360,10 +410,74 @@ export default function StaffDashboard({
   }
 
   
+  async function handleManualCheckIn(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+
+    if (!selectedEvent) return
+    if (!manualName.trim() || !manualCategory.trim()) {
+      setScanMessage('Nama dan kategori tamu wajib diisi.')
+      setScanMessageType('error')
+      return
+    }
+
+    setManualLoading(true)
+    setScanMessage('')
+    setScannedGuest(null)
+
+    try {
+      const { data, error } = await supabase.rpc('staff_add_guest_manual', {
+        p_event_id: selectedEvent.id,
+        p_name: manualName.trim(),
+        p_institution: manualInstitution.trim() || null,
+        p_category: manualCategory.trim(),
+        p_guest_group: manualGroup.trim() || null
+      })
+
+      if (error) throw error
+
+      const inserted = Array.isArray(data) ? data[0] : data
+      if (!inserted?.invite_token) {
+        throw new Error('Data tamu tersimpan, tetapi respons server tidak lengkap. Muat ulang daftar tamu untuk memeriksa data.')
+      }
+
+      const newGuest = inserted as GuestRecord
+      setScannedGuest(newGuest)
+
+      const { data: checkInData, error: checkInError } = await supabase.rpc(
+        'confirm_check_in',
+        {
+          p_event_id: selectedEvent.id,
+          p_invite_token: newGuest.invite_token
+        }
+      )
+
+      if (checkInError) throw checkInError
+
+      if (!checkInData?.success && !checkInData?.already_checked_in) {
+        setScanMessage('Tamu berhasil ditambahkan, tetapi check-in belum berhasil. Silakan coba konfirmasi kembali melalui data tamu.')
+        setScanMessageType('warning')
+      } else {
+        const checkedInAt = await getCheckInTimestamp(selectedEvent.id, newGuest.id)
+        setScannedGuest({ ...newGuest, status: 'Hadir', checked_in_at: checkedInAt })
+        setScanMessage('Tamu berhasil ditambahkan dan langsung tercatat check-in.')
+        setScanMessageType('success')
+        setManualName('')
+        setManualInstitution('')
+        setManualGroup('')
+      }
+    } catch (err) {
+      setScanMessage(err instanceof Error ? err.message : 'Gagal menambahkan tamu secara manual.')
+      setScanMessageType('error')
+    } finally {
+      setManualLoading(false)
+    }
+  }
+
   function resetScan() {
     setScannedGuest(null)
     setScanMessage('')
     setScannerOpen(false)
+    setCheckInMode('scan')
   }
 
   function chooseEvent(event: AssignedEvent) {
@@ -514,11 +628,29 @@ export default function StaffDashboard({
               </button>
             </div>
 
-            {!scannerOpen && (
+            <div className="staff-checkin-tabs" role="tablist" aria-label="Metode check-in">
+              <button
+                type="button"
+                className={`staff-checkin-tab ${checkInMode === 'scan' ? 'active' : ''}`}
+                onClick={() => { resetScan(); setCheckInMode('scan') }}
+              >
+                <Camera size={17} /> Scan QR
+              </button>
+              <button
+                type="button"
+                className={`staff-checkin-tab ${checkInMode === 'manual' ? 'active' : ''}`}
+                onClick={() => { resetScan(); setCheckInMode('manual') }}
+              >
+                <Keyboard size={17} /> Tulis Manual
+              </button>
+            </div>
+
+            {checkInMode === 'scan' && !scannerOpen && (
               <button
                 className="btn-primary staff-open-scanner"
                 onClick={() => {
                   resetScan()
+                  setCheckInMode('scan')
                   setScannerOpen(true)
                 }}
               >
@@ -527,7 +659,37 @@ export default function StaffDashboard({
               </button>
             )}
 
-            {scannerOpen && (
+            {checkInMode === 'manual' && (
+              <form className="staff-manual-form" onSubmit={handleManualCheckIn}>
+                <div className="staff-manual-heading">
+                  <UserPlus size={20} />
+                  <div>
+                    <h4>Tambah tamu tanpa QR Code</h4>
+                    <p>Isi data tamu. Sistem akan menyimpan undangan dan langsung mencatat check-in.</p>
+                  </div>
+                </div>
+                <div className="staff-manual-grid">
+                  <label>Nama lengkap *
+                    <input value={manualName} onChange={e => setManualName(e.target.value)} placeholder="Nama lengkap tamu" required />
+                  </label>
+                  <label>Instansi
+                    <input value={manualInstitution} onChange={e => setManualInstitution(e.target.value)} placeholder="Instansi / organisasi" />
+                  </label>
+                  <label>Kategori *
+                    <input value={manualCategory} onChange={e => setManualCategory(e.target.value)} placeholder="Contoh: VIP, Reguler, Panitia" required />
+                  </label>
+                  <label>Kelompok / keterangan
+                    <input value={manualGroup} onChange={e => setManualGroup(e.target.value)} placeholder="Opsional" />
+                  </label>
+                </div>
+                <button className="btn-primary staff-confirm-checkin" type="submit" disabled={manualLoading}>
+                  <UserPlus size={17} />
+                  {manualLoading ? 'Menyimpan dan check-in...' : 'Simpan Tamu & Check-in'}
+                </button>
+              </form>
+            )}
+
+            {checkInMode === 'scan' && scannerOpen && (
               <QrCamera
                 onDecoded={handleQrDecoded}
                 onClose={() => setScannerOpen(false)}
@@ -595,6 +757,12 @@ export default function StaffDashboard({
                       {scannedGuest.status}
                     </strong>
                   </div>
+                  {scannedGuest.status === 'Hadir' && (
+                    <div className="staff-checkin-time">
+                      <span>Waktu Check-in</span>
+                      <strong>{formatCheckInTime(scannedGuest.checked_in_at)}</strong>
+                    </div>
+                  )}
                 </div>
 
                 {scannedGuest.status !== 'Hadir' && (

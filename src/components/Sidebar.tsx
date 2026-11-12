@@ -13,7 +13,12 @@ export type Page =
   | 'staff'
   | 'settings'
 
+type EventOption = { id: string; name: string }
+
 interface SidebarProps {
+  activeEvents: EventOption[]
+  selectedEventId: string
+  onSelectEvent: (eventId: string) => void
   activePage: Page
   onNavigate: (page: Page) => void
   mobileOpen: boolean
@@ -36,6 +41,9 @@ const managementItems = [
 
 export default function Sidebar({
   activePage,
+  activeEvents,
+  selectedEventId,
+  onSelectEvent,
   onNavigate,
   mobileOpen,
   onClose,
@@ -74,13 +82,23 @@ export default function Sidebar({
         <div className="workspace-label">WORKSPACE</div>
 
         <div className="event-switcher">
-          <div className="event-avatar">W</div>
+          <div className="event-avatar">{activeEvents.find(event => event.id === selectedEventId)?.name?.charAt(0).toUpperCase() || 'E'}</div>
           <div className="event-switcher-copy">
-            <strong>Wisuda 2026</strong>
-            <small>Event aktif</small>
+            <strong>{activeEvents.find(event => event.id === selectedEventId)?.name || 'Pilih event aktif'}</strong>
+            <small>{activeEvents.length} event tersedia</small>
           </div>
           <span className="status-dot" />
         </div>
+        <select
+          className="event-select"
+          aria-label="Pilih event yang dikelola"
+          value={selectedEventId}
+          onChange={event => onSelectEvent(event.target.value)}
+          disabled={activeEvents.length === 0}
+        >
+          {activeEvents.length === 0 && <option value="">Tidak ada event aktif</option>}
+          {activeEvents.map(event => <option key={event.id} value={event.id}>{event.name}</option>)}
+        </select>
 
         <div className="nav-label">MENU UTAMA</div>
 

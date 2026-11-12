@@ -34,29 +34,44 @@ type ActiveEvent = {
 function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [activeEvents, setActiveEvents] = useState<ActiveEvent[]>([])
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null)
-const [eventLoading, setEventLoading] = useState(true)
+  const [eventLoading, setEventLoading] = useState(true)
 
-useEffect(() => {
-  async function loadActiveEvent() {
-    const { data, error } = await supabase
-      .from('events')
-      .select('id, name, description, event_date, location, status')
-      .eq('status', 'active')
-      .maybeSingle()
+  useEffect(() => {
+    let cancelled = false
+    async function loadActiveEvents() {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, description, event_date, location, status')
+        .eq('status', 'active')
+        .order('event_date', { ascending: false })
 
-    if (error) {
-      console.error('Gagal mengambil event aktif:', error.message)
-      setActiveEvent(null)
-    } else {
-      setActiveEvent(data as ActiveEvent | null)
+      if (cancelled) return
+      if (error) {
+        console.error('Gagal mengambil event aktif:', error.message)
+        setActiveEvents([])
+        setActiveEvent(null)
+      } else {
+        const available = (data || []) as ActiveEvent[]
+        setActiveEvents(available)
+        const savedId = window.localStorage.getItem('eventcheckrijan:selected-event-id')
+        const selected = available.find(event => event.id === savedId) || available[0] || null
+        setActiveEvent(selected)
+        if (selected) window.localStorage.setItem('eventcheckrijan:selected-event-id', selected.id)
+        else window.localStorage.removeItem('eventcheckrijan:selected-event-id')
+      }
+      setEventLoading(false)
     }
+    void loadActiveEvents()
+    return () => { cancelled = true }
+  }, [])
 
-    setEventLoading(false)
+  function selectActiveEvent(eventId: string) {
+    const selected = activeEvents.find(event => event.id === eventId) || null
+    setActiveEvent(selected)
+    if (selected) window.localStorage.setItem('eventcheckrijan:selected-event-id', selected.id)
   }
-
-  void loadActiveEvent()
-}, [])
 
 
 const [guests, setGuests] = useState<Guest[]>([])
@@ -126,8 +141,6 @@ useEffect(() => {
     : null
 
   const present = guests.filter(g => g.status === 'Hadir').length
-  const vip = guests.filter(g => g.category === 'VIP').length
-  const checkedVip = guests.filter(g => g.category === 'VIP' && g.status === 'Hadir').length
   const recent = guests.filter(g => g.status === 'Hadir').slice().reverse().slice(0, 5)
   const filtered = useMemo(() => guests.filter(g => `${g.name} ${g.invitationCode} ${g.institution}`.toLowerCase().includes(search.toLowerCase())), [guests, search])
 
@@ -447,8 +460,6 @@ const pageContent = () => {
     <Dashboard
       guests={guests}
       present={present}
-      vip={vip}
-      checkedVip={checkedVip}
       recent={recent}
       onNavigate={setPage}
       activeEvent={activeEvent}
@@ -501,7 +512,15 @@ const pageContent = () => {
   )
 }
 
-  if (page === 'events') return <EventsPage />
+  if (page === 'events') return <EventsPage onEventsChanged={async () => {
+    const { data } = await supabase.from('events').select('id, name, description, event_date, location, status').eq('status', 'active').order('event_date', { ascending: false })
+    const available = (data || []) as ActiveEvent[]
+    setActiveEvents(available)
+    const stillSelected = available.find(event => event.id === activeEvent?.id) || available[0] || null
+    setActiveEvent(stillSelected)
+    if (stillSelected) window.localStorage.setItem('eventcheckrijan:selected-event-id', stillSelected.id)
+    else window.localStorage.removeItem('eventcheckrijan:selected-event-id')
+  }} />
 
   if (page === 'staff') return <StaffPage />
 
@@ -531,6 +550,9 @@ const pageContent = () => {
   return <div className="app-shell">
     <Sidebar
   activePage={page}
+  activeEvents={activeEvents}
+  selectedEventId={activeEvent?.id || ''}
+  onSelectEvent={selectActiveEvent}
   onNavigate={setPage}
   mobileOpen={mobileOpen}
   onClose={() => setMobileOpen(false)}
@@ -658,8 +680,6 @@ const pageContent = () => {
 function Dashboard({
   guests,
   present,
-  vip,
-  checkedVip,
   recent,
   onNavigate,
   activeEvent,
@@ -667,8 +687,6 @@ function Dashboard({
 }: {
   guests: Guest[]
   present: number
-  vip: number
-  checkedVip: number
   recent: Guest[]
   onNavigate: (p: Page) => void
   activeEvent: ActiveEvent | null
@@ -732,10 +750,27 @@ function Dashboard({
     <div className="section-title-row"><div><h2>Ringkasan kehadiran</h2><p>Berikut kondisi kehadiran tamu pada event aktif.</p></div><span className="live-indicator"><i/> Data demo</span></div>
     <div className="stats-grid">
       <StatCard label="Total Tamu" value={String(total)} note="Seluruh data tamu" icon={Users} tone="blue"/>
-      <StatCard label="Sudah Hadir" value={String(present)} note={`${percent}% dari total tamu`} icon={UserCheck} tone="green" trend="+12,5%"/>
+      <StatCard label="Sudah Hadir" value={String(present)} note={`${percent}% dari total tamu`} icon={UserCheck} tone="green"/>
       <StatCard label="Belum Hadir" value={String(total - present)} note="Menunggu check-in" icon={UserRoundX} tone="amber"/>
-      <StatCard label="Tamu VIP" value={`${checkedVip}/${vip}`} note="VIP sudah check-in" icon={Crown} tone="violet"/>
+      <StatCard label="Jumlah Kategori" value={String(new Set(guests.map(g => g.category.trim()).filter(Boolean)).size)} note="Kategori dari data tamu" icon={Crown} tone="violet"/>
     </div>
+    <section className="panel dashboard-category-panel">
+      <div className="panel-heading"><div><h3>Ringkasan per kategori</h3><p>Jumlah tamu, sudah hadir, dan belum hadir untuk setiap kategori dari Excel.</p></div></div>
+      {guests.length ? <div className="category-summary-grid">
+        {Array.from(new Set(guests.map(g => g.category.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'id')).map(category => {
+          const categoryGuests = guests.filter(g => g.category.trim() === category)
+          const categoryPresent = categoryGuests.filter(g => g.status === 'Hadir').length
+          const categoryAbsent = categoryGuests.length - categoryPresent
+          const categoryPercent = categoryGuests.length ? Math.round(categoryPresent / categoryGuests.length * 100) : 0
+          return <article className="category-summary-card" key={category}>
+            <div className="category-summary-heading"><CategoryBadge category={category}/><span>{categoryPercent}% hadir</span></div>
+            <div className="category-summary-total">{categoryGuests.length}<small> total tamu</small></div>
+            <div className="category-summary-stats"><span><i className="category-dot present-dot"/>Hadir <strong>{categoryPresent}</strong></span><span><i className="category-dot absent-dot"/>Belum hadir <strong>{categoryAbsent}</strong></span></div>
+            <div className="category-summary-progress"><i style={{width: `${categoryPercent}%`}}/></div>
+          </article>
+        })}
+      </div> : <div className="empty-state">Belum ada data tamu untuk ditampilkan.</div>}
+    </section>
     <div className="dashboard-grid">
       <section className="panel attendance-panel">
         <div className="panel-heading"><div><h3>Statistik kehadiran</h3><p>Perkembangan check-in hari ini</p></div><button className="select-chip">Hari ini <ChevronRight size={14}/></button></div>
@@ -1055,12 +1090,9 @@ function Reports({
     'all' | 'present' | 'absent'
   >('all')
 
-  const categories: GuestCategory[] = [
-    'VVIP',
-    'VIP',
-    'Reguler',
-    'Lainnya'
-  ]
+  const categories = Array.from(
+    new Set(guests.map(guest => guest.category.trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'id'))
 
   const filterLabels = {
     all: 'Semua Tamu',

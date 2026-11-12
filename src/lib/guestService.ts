@@ -17,18 +17,7 @@ type GuestRow = {
 }
 
 function mapGuest(row: GuestRow): Guest {
-  const validCategories: GuestCategory[] = [
-    'VVIP',
-    'VIP',
-    'Reguler',
-    'Lainnya'
-  ]
-
-  const category: GuestCategory = validCategories.includes(
-    row.category as GuestCategory
-  )
-    ? (row.category as GuestCategory)
-    : 'Lainnya'
+  const category: GuestCategory = row.category?.trim() || 'Lainnya'
 
   const status: GuestStatus =
     row.status === 'Hadir' ? 'Hadir' : 'Belum hadir'

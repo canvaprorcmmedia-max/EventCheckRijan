@@ -18,13 +18,6 @@ type Props = {
   onImported: () => Promise<void>
 }
 
-const categories: GuestCategory[] = [
-  'VVIP',
-  'VIP',
-  'Reguler',
-  'Lainnya'
-]
-
 export default function GuestImportModal({
   eventId,
   existingGuests,
@@ -80,7 +73,7 @@ export default function GuestImportModal({
       ['PETUNJUK PENGISIAN DATA TAMU'],
       ['Nama Tamu: wajib diisi'],
       ['Instansi: boleh dikosongkan'],
-      ['Kategori: VVIP, VIP, Reguler, atau Lainnya'],
+      ['Kategori: isi sesuai kategori pada acara (contoh: VVIP, VIP, Reguler, Panitia, Undangan).'],
       ['Kelompok Tamu: boleh dikosongkan'],
       ['Hapus atau ganti data contoh sebelum mengimpor.']
     ])
@@ -155,8 +148,8 @@ export default function GuestImportModal({
           return
         }
 
-        if (!categories.includes(categoryText as GuestCategory)) {
-          validationErrors.push(`Baris ${rowNumber}: Kategori tidak valid.`)
+        if (!categoryText) {
+          validationErrors.push(`Baris ${rowNumber}: Kategori wajib diisi.`)
           return
         }
 

@@ -7,7 +7,9 @@ import {
   RefreshCw,
   CheckCircle2,
   Power,
-  Archive
+  Archive,
+  RotateCcw,
+  Trash2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -21,11 +23,11 @@ type EventItem = {
   created_at: string
 }
 
-export default function EventsPage() {
+export default function EventsPage({ onEventsChanged }: { onEventsChanged?: () => void | Promise<void> }) {
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activatingId, setActivatingId] = useState<string | null>(null)
+  const [processingId, setProcessingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -107,19 +109,15 @@ export default function EventsPage() {
   }
 
   async function handleActivateEvent(event: EventItem) {
-    if (event.status === 'active' || event.status === 'archived') return
+    if (event.status !== 'draft') return
 
-    const currentActive = events.find(item => item.status === 'active')
-
-    const confirmation = currentActive
-      ? `Aktifkan "${event.name}"?\n\nEvent "${currentActive.name}" akan kembali menjadi Draft.`
-      : `Aktifkan event "${event.name}"?`
+    const confirmation = `Aktifkan event "${event.name}"?\n\nEvent aktif lainnya akan tetap aktif.`
 
     if (!window.confirm(confirmation)) return
 
     setError('')
     setSuccess('')
-    setActivatingId(event.id)
+    setProcessingId(event.id)
 
     const { error: activateError } = await supabase.rpc(
       'activate_event',
@@ -131,9 +129,115 @@ export default function EventsPage() {
     } else {
       setSuccess(`Event "${event.name}" sekarang aktif.`)
       await loadEvents()
+      await onEventsChanged?.()
     }
 
-    setActivatingId(null)
+    setProcessingId(null)
+  }
+
+  async function handleArchiveEvent(event: EventItem) {
+    if (event.status === 'archived') return
+
+    const confirmation = event.status === 'active'
+      ? `Nonaktifkan event "${event.name}"?\n\nEvent akan masuk Arsip. Data tamu, QR, dan riwayat check-in tetap tersimpan.`
+      : `Arsipkan event "${event.name}"?\n\nData event tetap tersimpan dan bisa diaktifkan kembali.`
+
+    if (!window.confirm(confirmation)) return
+
+    setError('')
+    setSuccess('')
+    setProcessingId(event.id)
+
+    const { data, error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'archived' })
+      .eq('id', event.id)
+      .select('id')
+
+    if (updateError) {
+      setError(`Gagal menonaktifkan event: ${updateError.message}`)
+    } else if (!data || data.length === 0) {
+      setError('Event tidak berhasil diubah. Periksa izin akun atau akses database.')
+    } else {
+      setSuccess(`Event "${event.name}" berhasil diarsipkan. Data tetap tersimpan.`)
+      await loadEvents()
+      await onEventsChanged?.()
+    }
+
+    setProcessingId(null)
+  }
+
+  async function handleRestoreEvent(event: EventItem) {
+    if (event.status !== 'archived') return
+
+    const confirmation = `Aktifkan kembali event "${event.name}"?\n\nEvent akan dikembalikan ke status Draft.`
+
+    if (!window.confirm(confirmation)) return
+
+    setError('')
+    setSuccess('')
+    setProcessingId(event.id)
+
+    const { data, error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'draft' })
+      .eq('id', event.id)
+      .eq('status', 'archived')
+      .select('id')
+
+    if (updateError) {
+      setError(`Gagal mengaktifkan kembali event: ${updateError.message}`)
+    } else if (!data || data.length === 0) {
+      setError('Event tidak berhasil dipulihkan. Silakan muat ulang halaman.')
+    } else {
+      setSuccess(`Event "${event.name}" berhasil dikembalikan menjadi Draft.`)
+      await loadEvents()
+    }
+
+    setProcessingId(null)
+  }
+
+  async function handleDeleteEvent(event: EventItem) {
+    if (event.status === 'active') {
+      setError('Event yang sedang Aktif tidak bisa dihapus. Arsipkan terlebih dahulu.')
+      return
+    }
+
+    const confirmation = window.confirm(
+      `PERINGATAN: HAPUS PERMANEN!\n\n` +
+      `Apakah kamu yakin ingin menghapus event "${event.name}"?\n\n` +
+      `Semua data berikut juga akan ikut terhapus:\n` +
+      `- Data tamu\n` +
+      `- Riwayat check-in\n` +
+      `- Penugasan petugas\n` +
+      `- Pengaturan warna dan logo event\n\n` +
+      `Data yang sudah dihapus tidak bisa dipulihkan melalui aplikasi.\n\n` +
+      `Tekan OK hanya jika kamu benar-benar yakin.`
+    )
+
+    if (!confirmation) return
+
+    setError('')
+    setSuccess('')
+    setProcessingId(event.id)
+
+    const { data, error: deleteError } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', event.id)
+      .neq('status', 'active')
+      .select('id')
+
+    if (deleteError) {
+      setError(`Gagal menghapus event: ${deleteError.message}`)
+    } else if (!data || data.length === 0) {
+      setError('Event tidak terhapus. Pastikan event bukan event Aktif dan akun memiliki izin.')
+    } else {
+      setSuccess(`Event "${event.name}" dan seluruh data terkait berhasil dihapus.`)
+      await loadEvents()
+    }
+
+    setProcessingId(null)
   }
 
   function statusLabel(status: EventItem['status']) {
@@ -155,7 +259,7 @@ export default function EventsPage() {
             <button
               className="btn-secondary"
               onClick={() => void loadEvents()}
-              disabled={loading}
+              disabled={loading || processingId !== null}
             >
               <RefreshCw size={16} />
               Muat ulang
@@ -168,6 +272,7 @@ export default function EventsPage() {
                 setSuccess('')
                 setShowForm(!showForm)
               }}
+              disabled={saving || processingId !== null}
             >
               <Plus size={16} />
               Buat event
@@ -251,68 +356,106 @@ export default function EventsPage() {
               <span>Buat acara pertama untuk mulai menggunakan EventCheckRijan.</span>
             </div>
           ) : (
-            events.map(event => (
-              <article className="event-item" key={event.id}>
-                <div className="event-item-icon">
-                  <CalendarDays size={22} />
-                </div>
+            events.map(event => {
+              const isProcessing = processingId === event.id
+              const anyProcessing = processingId !== null
 
-                <div className="event-item-info">
-                  <strong>{event.name}</strong>
-
-                  {event.description && <p>{event.description}</p>}
-
-                  <div className="event-item-meta">
-                    <span>
-                      <CalendarDays size={14} />
-                      {event.event_date
-                        ? new Date(`${event.event_date}T00:00:00`).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })
-                        : 'Tanggal belum ditentukan'}
-                    </span>
-
-                    <span>
-                      <MapPin size={14} />
-                      {event.location || 'Lokasi belum ditentukan'}
-                    </span>
+              return (
+                <article className="event-item" key={event.id}>
+                  <div className="event-item-icon">
+                    <CalendarDays size={22} />
                   </div>
-                </div>
 
-                <div className="event-item-controls">
-                  <span className={`event-status status-${event.status}`}>
-                    {statusLabel(event.status)}
-                  </span>
+                  <div className="event-item-info">
+                    <strong>{event.name}</strong>
 
-                  {event.status === 'draft' && (
-                    <button
-                      className="btn-primary event-activate-btn"
-                      onClick={() => void handleActivateEvent(event)}
-                      disabled={activatingId !== null}
-                    >
-                      <Power size={14} />
-                      {activatingId === event.id ? 'Mengaktifkan...' : 'Aktifkan Event'}
-                    </button>
-                  )}
+                    {event.description && <p>{event.description}</p>}
 
-                  {event.status === 'active' && (
-                    <span className="event-active-label">
-                      <CheckCircle2 size={15} />
-                      Sedang dikelola
+                    <div className="event-item-meta">
+                      <span>
+                        <CalendarDays size={14} />
+                        {event.event_date
+                          ? new Date(`${event.event_date}T00:00:00`).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })
+                          : 'Tanggal belum ditentukan'}
+                      </span>
+
+                      <span>
+                        <MapPin size={14} />
+                        {event.location || 'Lokasi belum ditentukan'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="event-item-controls">
+                    <span className={`event-status status-${event.status}`}>
+                      {statusLabel(event.status)}
                     </span>
-                  )}
 
-                  {event.status === 'archived' && (
-                    <span className="event-archived-label">
-                      <Archive size={14} />
-                      Arsip
-                    </span>
-                  )}
-                </div>
-              </article>
-            ))
+                    {event.status === 'draft' && (
+                      <button
+                        className="btn-primary event-activate-btn"
+                        onClick={() => void handleActivateEvent(event)}
+                        disabled={anyProcessing}
+                      >
+                        <Power size={14} />
+                        {isProcessing ? 'Memproses...' : 'Aktifkan Event'}
+                      </button>
+                    )}
+
+                    {event.status === 'active' && (
+                      <span className="event-active-label">
+                        <CheckCircle2 size={15} />
+                        Sedang dikelola
+                      </span>
+                    )}
+
+                    {event.status === 'archived' && (
+                      <span className="event-archived-label">
+                        <Archive size={14} />
+                        Arsip
+                      </span>
+                    )}
+
+                    {event.status !== 'archived' && (
+                      <button
+                        className="btn-secondary event-action-btn"
+                        onClick={() => void handleArchiveEvent(event)}
+                        disabled={anyProcessing}
+                      >
+                        <Archive size={14} />
+                        {isProcessing ? 'Memproses...' : 'Nonaktifkan'}
+                      </button>
+                    )}
+
+                    {event.status === 'archived' && (
+                      <button
+                        className="btn-secondary event-action-btn"
+                        onClick={() => void handleRestoreEvent(event)}
+                        disabled={anyProcessing}
+                      >
+                        <RotateCcw size={14} />
+                        {isProcessing ? 'Memproses...' : 'Aktifkan Kembali'}
+                      </button>
+                    )}
+
+                    {event.status !== 'active' && (
+                      <button
+                        className="btn-secondary event-action-btn"
+                        onClick={() => void handleDeleteEvent(event)}
+                        disabled={anyProcessing}
+                      >
+                        <Trash2 size={14} />
+                        {isProcessing ? 'Memproses...' : 'Hapus Permanen'}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })
           )}
         </div>
       </div>

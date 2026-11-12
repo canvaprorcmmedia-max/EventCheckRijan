@@ -1,5 +1,5 @@
 
-export type GuestCategory = 'VVIP' | 'VIP' | 'Reguler' | 'Lainnya'
+export type GuestCategory = string
 
 export type GuestStatus = 'Hadir' | 'Belum hadir'
 
