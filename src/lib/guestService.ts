@@ -14,6 +14,7 @@ type GuestRow = {
   status: string
   source: string
   created_at: string
+  checked_in_at: string | null
 }
 
 function mapGuest(row: GuestRow): Guest {
@@ -31,7 +32,8 @@ function mapGuest(row: GuestRow): Guest {
     invitationCode: row.invitation_code,
     inviteToken: row.invite_token,
     status,
-    source: row.source === 'Walk-in' ? 'Walk-in' : 'Undangan'
+    source: row.source === 'Walk-in' ? 'Walk-in' : 'Undangan',
+    checkedInAt: row.checked_in_at ?? undefined
   }
 }
 
@@ -41,18 +43,19 @@ export async function getGuestsByEvent(
   const { data, error } = await supabase
     .from('guests')
     .select(`
-      id,
-      event_id,
-      name,
-      institution,
-      category,
-      guest_group,
-      invitation_code,
-      invite_token,
-      status,
-      source,
-      created_at
-    `)
+  id,
+  event_id,
+  name,
+  institution,
+  category,
+  guest_group,
+  invitation_code,
+  invite_token,
+  status,
+  source,
+  created_at,
+  checked_in_at
+`)
     .eq('event_id', eventId)
     .order('created_at', { ascending: false })
 
@@ -98,18 +101,19 @@ export async function importGuestsToEvent(
     .from('guests')
     .insert(rows)
     .select(`
-      id,
-      event_id,
-      name,
-      institution,
-      category,
-      guest_group,
-      invitation_code,
-      invite_token,
-      status,
-      source,
-      created_at
-    `)
+  id,
+  event_id,
+  name,
+  institution,
+  category,
+  guest_group,
+  invitation_code,
+  invite_token,
+  status,
+  source,
+  created_at,
+  checked_in_at
+`)
 
   if (error) {
     throw new Error(`Gagal mengimpor data tamu: ${error.message}`)
@@ -146,18 +150,19 @@ export async function addGuestToEvent(
     .from('guests')
     .insert(row)
     .select(`
-      id,
-      event_id,
-      name,
-      institution,
-      category,
-      guest_group,
-      invitation_code,
-      invite_token,
-      status,
-      source,
-      created_at
-    `)
+  id,
+  event_id,
+  name,
+  institution,
+  category,
+  guest_group,
+  invitation_code,
+  invite_token,
+  status,
+  source,
+  created_at,
+  checked_in_at
+`)
     .single()
 
   if (error) {
@@ -188,4 +193,28 @@ export async function deleteGuestsFromEvent(
   if (error) {
     throw new Error(`Gagal menghapus data tamu: ${error.message}`)
   }
+}
+export async function checkInGuest(
+  eventId: string,
+  guestId: string
+): Promise<string> {
+
+  const checkedInAt = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({
+      status: 'Hadir',
+      checked_in_at: checkedInAt
+    })
+    .eq('event_id', eventId)
+    .eq('id', guestId)
+    .select('checked_in_at')
+    .single()
+
+  if (error) {
+    throw new Error(`Gagal menyimpan check-in: ${error.message}`)
+  }
+
+  return data.checked_in_at
 }

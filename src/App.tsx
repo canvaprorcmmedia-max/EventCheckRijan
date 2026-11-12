@@ -3,7 +3,8 @@ import { supabase } from './lib/supabase'
 import {
   getGuestsByEvent,
   deleteGuestsFromEvent,
-  addGuestToEvent
+  addGuestToEvent,
+  checkInGuest
 } from './lib/guestService'
 import EventsPage from './components/EventsPage'
 import StaffPage from './components/StaffPage'
@@ -144,14 +145,55 @@ useEffect(() => {
   const recent = guests.filter(g => g.status === 'Hadir').slice().reverse().slice(0, 5)
   const filtered = useMemo(() => guests.filter(g => `${g.name} ${g.invitationCode} ${g.institution}`.toLowerCase().includes(search.toLowerCase())), [guests, search])
 
-  function checkIn(id: string) {
-    const target = guests.find(g => g.id === id)
-    if (!target) return
-    if (target.status === 'Hadir') { setNotice(`${target.name} sudah tercatat hadir.`); return }
-    setGuests(current => current.map(g => g.id === id ? { ...g, status: 'Hadir', checkedInAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) } : g))
-    setNotice(`${target.name} berhasil dicatat hadir.`)
-    window.setTimeout(() => setNotice(''), 3500)
+  async function checkIn(id: string) {
+  const target = guests.find(g => g.id === id)
+
+  if (!target) return
+
+  if (target.status === 'Hadir') {
+    setNotice(`${target.name} sudah tercatat hadir.`)
+    return
   }
+
+  if (!activeEvent?.id) {
+    setNotice('Tidak ada acara aktif.')
+    return
+  }
+
+  try {
+    const checkedInAt = await checkInGuest(
+      activeEvent.id,
+      id
+    )
+
+    setGuests(current =>
+      current.map(g =>
+        g.id === id
+          ? {
+              ...g,
+              status: 'Hadir',
+              checkedInAt
+            }
+          : g
+      )
+    )
+
+    setNotice(
+      `${target.name} berhasil check-in.`
+    )
+
+    window.setTimeout(() => setNotice(''), 3500)
+
+  } catch (error) {
+    console.error('Gagal check-in:', error)
+
+    setNotice(
+      error instanceof Error
+        ? error.message
+        : 'Gagal menyimpan check-in.'
+    )
+  }
+}
   
 async function addGuest() {
   if (!activeEvent?.id) {
@@ -1016,10 +1058,21 @@ function GuestTable({
                 <td><StatusBadge status={g.status} /></td>
 
                 <td>
-                  <span className="time-label">
-                    {g.checkedInAt || '—'}
-                  </span>
-                </td>
+  <span className="time-label">
+    {g.checkedInAt
+      ? new Date(g.checkedInAt).toLocaleString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+      : '—'
+    }
+  </span>
+</td>
 
                 {!compact && (
                   <td>
