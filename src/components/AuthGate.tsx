@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase'
 type UserProfile = {
   full_name: string
   role: 'admin' | 'staff'
+  is_active: boolean
 }
 
 type LoginRole = 'admin' | 'staff'
@@ -71,7 +72,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('full_name, role, is_active')
         .eq('id', session.user.id)
         .single()
 
@@ -80,6 +81,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (error) {
         setError('Profil akun tidak ditemukan atau tidak dapat diakses.')
         setProfile(null)
+      } else if (data.is_active !== true) {
+        setError('Akun Anda telah dinonaktifkan oleh Admin. Hubungi Admin untuk bantuan.')
+        setProfile(null)
+        setProfileLoading(false)
+        await supabase.auth.signOut({ scope: 'global' })
+        return
       } else if (data.role === 'admin' || data.role === 'staff') {
         // Pastikan pilihan login sesuai dengan role akun sebenarnya.
         if (selectedRole && data.role !== selectedRole) {

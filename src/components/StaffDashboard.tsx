@@ -220,6 +220,35 @@ export default function StaffDashboard({
     void loadEvents()
   }, [userId])
 
+  // Pemeriksaan berkala agar dashboard pada sesi lama segera keluar
+  // setelah Admin menonaktifkan akun. RLS/RPC tetap menjadi pagar server utama.
+  useEffect(() => {
+    let active = true
+
+    async function verifyAccountStatus() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!active || error) return
+      if (!data || data.is_active !== true) {
+        onLogout()
+      }
+    }
+
+    void verifyAccountStatus()
+    const interval = window.setInterval(() => {
+      void verifyAccountStatus()
+    }, 20000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [userId, onLogout])
+
   function formatDate(date: string | null) {
     if (!date) return 'Tanggal belum ditentukan'
 

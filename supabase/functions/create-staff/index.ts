@@ -60,11 +60,11 @@ export default {
       const { data: adminProfile, error: adminError } =
         await ctx.supabase
           .from("profiles")
-          .select("id, role")
+          .select("id, role, is_active")
           .eq("id", userId)
           .maybeSingle();
 
-      if (adminError || adminProfile?.role !== "admin") {
+      if (adminError || adminProfile?.role !== "admin" || adminProfile?.is_active !== true) {
         return Response.json(
           {
             success: false,
