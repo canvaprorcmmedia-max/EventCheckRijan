@@ -6,7 +6,6 @@ import {
   importGuestsToEvent,
   type GuestImportRow
 } from '../lib/guestService'
-import type { GuestCategory } from '../types'
 
 type Props = {
   eventId: string
@@ -73,8 +72,9 @@ export default function GuestImportModal({
       ['PETUNJUK PENGISIAN DATA TAMU'],
       ['Nama Tamu: wajib diisi'],
       ['Instansi: boleh dikosongkan'],
-      ['Kategori: isi sesuai kategori pada acara (contoh: VVIP, VIP, Reguler, Panitia, Undangan).'],
+      ['Kategori: bebas diisi sesuai kebutuhan acara, contoh: VVIP, WISUDAWAN, DOSEN, PANITIA, ORANG TUA, atau nama lainnya.'],
       ['Kelompok Tamu: boleh dikosongkan'],
+      ['Kategori tidak dibatasi daftar bawaan aplikasi.'],
       ['Hapus atau ganti data contoh sebelum mengimpor.']
     ])
 
@@ -165,7 +165,7 @@ export default function GuestImportModal({
         imported.push({
           name,
           institution,
-          category: categoryText as GuestCategory,
+          category: categoryText,
           guestGroup
         })
       })

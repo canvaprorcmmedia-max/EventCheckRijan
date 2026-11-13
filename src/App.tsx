@@ -201,13 +201,16 @@ async function addGuest() {
     return
   }
 
-  if (!newName.trim()) return
+  if (!newName.trim() || !newCategory.trim()) {
+    setNotice('Nama tamu dan kategori wajib diisi.')
+    return
+  }
 
   try {
     const newGuest = await addGuestToEvent(activeEvent.id, {
       name: newName.trim(),
       institution: 'Tamu undangan',
-      category: newCategory,
+      category: newCategory.trim(),
       guestGroup: ''
     })
 
@@ -612,7 +615,18 @@ const pageContent = () => {
     {showAdd && <div className="modal-backdrop" onClick={() => setShowAdd(false)}><div className="modal" onClick={e => e.stopPropagation()}>
       <div className="modal-head"><div><h2>Daftarkan tamu undangan</h2><p>Tamu akan menerima link undangan dan QR pribadi.</p></div><button className="icon-button" onClick={() => setShowAdd(false)}><X size={19}/></button></div>
       <label className="form-label">Nama lengkap</label><input className="form-input" autoFocus value={newName} onChange={e => setNewName(e.target.value)} placeholder="Masukkan nama tamu"/>
-      <label className="form-label">Kategori tamu</label><select className="form-input" value={newCategory} onChange={e => setNewCategory(e.target.value as GuestCategory)}><option value="VVIP">VVIP</option><option value="VIP">VIP</option><option value="Reguler">Reguler</option><option value="Lainnya">Lainnya</option></select>
+      <label className="form-label">Kategori tamu</label>
+      <input
+        className="form-input"
+        value={newCategory}
+        onChange={e => setNewCategory(e.target.value)}
+        placeholder="Ketik kategori, contoh: WISUDAWAN, DOSEN, PANITIA"
+        maxLength={80}
+        required
+      />
+      <small style={{ display: 'block', marginTop: 6, color: '#64748b' }}>
+        Isi kategori sesuai kebutuhan acara. Nama kategori tidak dibatasi pilihan bawaan.
+      </small>
       
 <div className="modal-actions">
   <button
