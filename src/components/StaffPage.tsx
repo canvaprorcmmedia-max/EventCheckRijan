@@ -21,7 +21,37 @@ type StaffMember = {
   is_active: boolean
   assignments: StaffAssignment[]
 }
+const STAFF_DRAFT_STORAGE_KEY = 'eventcheckrijan:staff-create-draft'
 
+type StaffDraft = {
+  fullName: string
+  email: string
+  eventId: string
+}
+
+function getSavedStaffDraft(): StaffDraft {
+  const emptyDraft: StaffDraft = {
+    fullName: '',
+    email: '',
+    eventId: ''
+  }
+
+  try {
+    const saved = localStorage.getItem(STAFF_DRAFT_STORAGE_KEY)
+
+    if (!saved) return emptyDraft
+
+    const parsed = JSON.parse(saved) as Partial<StaffDraft>
+
+    return {
+      fullName: typeof parsed.fullName === 'string' ? parsed.fullName : '',
+      email: typeof parsed.email === 'string' ? parsed.email : '',
+      eventId: typeof parsed.eventId === 'string' ? parsed.eventId : ''
+    }
+  } catch {
+    return emptyDraft
+  }
+}
 export default function StaffPage() {
   const [events, setEvents] = useState<EventOption[]>([])
   const [staff, setStaff] = useState<StaffMember[]>([])
@@ -37,10 +67,10 @@ export default function StaffPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [confirmDeactivate, setConfirmDeactivate] = useState<StaffMember | null>(null)
 
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState(() => getSavedStaffDraft().fullName)
+  const [email, setEmail] = useState(() => getSavedStaffDraft().email)
   const [password, setPassword] = useState('')
-  const [eventId, setEventId] = useState('')
+  const [eventId, setEventId] = useState(() => getSavedStaffDraft().eventId)
 
   async function manageStaff(payload: Record<string, string>) {
     const { data, error: functionError } = await supabase.functions.invoke('manage-staff', { body: payload })
@@ -72,7 +102,31 @@ export default function StaffPage() {
   }
 
   useEffect(() => { void loadData() }, [])
+  useEffect(() => {
+  const draft: StaffDraft = {
+    fullName,
+    email,
+    eventId
+  }
 
+  try {
+    const isEmpty =
+      !fullName.trim() &&
+      !email.trim() &&
+      !eventId
+
+    if (isEmpty) {
+      localStorage.removeItem(STAFF_DRAFT_STORAGE_KEY)
+    } else {
+      localStorage.setItem(
+        STAFF_DRAFT_STORAGE_KEY,
+        JSON.stringify(draft)
+      )
+    }
+  } catch (err) {
+    console.warn('Gagal menyimpan draft petugas:', err)
+  }
+ }, [fullName, email, eventId])
   async function createStaff(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!fullName.trim() || !email.trim() || !password || !eventId) {

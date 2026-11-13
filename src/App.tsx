@@ -32,13 +32,40 @@ type ActiveEvent = {
   location: string | null
   status: 'draft' | 'active' | 'archived'
 }
+const PAGE_STORAGE_KEY = 'eventcheckrijan:last-page'
+
+const VALID_PAGES: Page[] = [
+  'dashboard',
+  'checkin',
+  'guests',
+  'reports',
+  'events',
+  'staff',
+  'settings'
+]
 function App() {
-  const [page, setPage] = useState<Page>('dashboard')
+  const [page, setPage] = useState<Page>(() => {
+    try {
+      const savedPage = window.localStorage.getItem(PAGE_STORAGE_KEY)
+
+      return VALID_PAGES.includes(savedPage as Page)
+        ? (savedPage as Page)
+        : 'dashboard'
+    } catch {
+      return 'dashboard'
+    }
+  })
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeEvents, setActiveEvents] = useState<ActiveEvent[]>([])
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null)
   const [eventLoading, setEventLoading] = useState(true)
-
+useEffect(() => {
+  try {
+    window.localStorage.setItem(PAGE_STORAGE_KEY, page)
+  } catch (error) {
+    console.warn('Gagal menyimpan halaman terakhir:', error)
+  }
+}, [page])
   useEffect(() => {
     let cancelled = false
     async function loadActiveEvents() {
@@ -602,8 +629,14 @@ const pageContent = () => {
   mobileOpen={mobileOpen}
   onClose={() => setMobileOpen(false)}
   onLogout={() => {
-    void supabase.auth.signOut()
-  }}
+  try {
+    window.localStorage.removeItem(PAGE_STORAGE_KEY)
+  } catch (error) {
+    console.warn('Gagal menghapus halaman tersimpan:', error)
+  }
+
+  void supabase.auth.signOut()
+}}
 />
     <main className="main-area">
       <Topbar page={page} onMenuClick={() => setMobileOpen(true)} />
