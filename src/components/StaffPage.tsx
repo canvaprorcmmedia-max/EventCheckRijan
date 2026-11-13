@@ -43,69 +43,61 @@ export default function StaffPage() {
   const [password, setPassword] = useState('')
   const [eventId, setEventId] = useState('')
 
+  async function loadData() {
+    setLoading(true)
+    setError('')
 
-async function loadData() {
-  setLoading(true)
-  setError('')
+    try {
+      const [eventResult, staffResult] = await Promise.all([
+        supabase
+          .from('events')
+          .select('id, name, status')
+          .order('created_at', { ascending: false }),
 
-  try {
-    const [eventResult, staffResult] = await Promise.all([
-      supabase
-        .from('events')
-        .select('id, name, status')
-        .order('created_at', { ascending: false }),
+        supabase
+          .from('event_staff')
+          .select(`
+            id,
+            staff_id,
+            event_id,
+            created_at,
+            profiles:profiles!event_staff_staff_id_fkey (
+              full_name,
+              role
+            ),
+            events:events!event_staff_event_id_fkey (
+              name,
+              status
+            )
+          `)
+          .order('created_at', { ascending: false })
+      ])
 
-      supabase
-        .from('event_staff')
-        .select(`
-          id,
-          staff_id,
-          event_id,
-          created_at,
-          profiles (
-            full_name,
-            role
-          ),
-          events (
-            name,
-            status
-          )
-        `)
-        .order('created_at', { ascending: false })
-    ])
+      if (eventResult.error) {
+        throw eventResult.error
+      }
 
-    // Periksa data acara terlebih dahulu.
-    if (eventResult.error) {
-      throw eventResult.error
-    }
+      setEvents((eventResult.data || []) as EventOption[])
 
-    setEvents((eventResult.data || []) as EventOption[])
+      if (staffResult.error) {
+        throw staffResult.error
+      }
 
-    // Periksa daftar penugasan secara terpisah.
-    if (staffResult.error) {
-      console.error('Gagal memuat penugasan:', staffResult.error)
-      setStaff([])
-      setError(
-        'Data acara berhasil dimuat, tetapi daftar petugas gagal dimuat: ' +
-        staffResult.error.message
+      setStaff(
+        (staffResult.data || []) as unknown as StaffAssignment[]
       )
-      return
+    } catch (err) {
+      console.error('Gagal memuat data petugas:', err)
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Gagal memuat data petugas.'
+      )
+    } finally {
+      setLoading(false)
     }
-
-    setStaff((staffResult.data || []) as unknown as StaffAssignment[])
-
-  } catch (err) {
-    console.error('Gagal memuat data:', err)
-
-    setError(
-      err instanceof Error
-        ? err.message
-        : 'Gagal memuat data acara.'
-    )
-  } finally {
-    setLoading(false)
   }
-}
 
   useEffect(() => {
     void loadData()
@@ -141,7 +133,9 @@ async function loadData() {
       }
 
       if (!data?.success) {
-        throw new Error(data?.message || 'Gagal membuat akun petugas.')
+        throw new Error(
+          data?.message || 'Gagal membuat akun petugas.'
+        )
       }
 
       setNotice(
@@ -156,6 +150,7 @@ async function loadData() {
       await loadData()
     } catch (err) {
       console.error('Gagal membuat petugas:', err)
+
       setError(
         err instanceof Error
           ? err.message
@@ -294,7 +289,9 @@ async function loadData() {
         </div>
 
         {loading ? (
-          <div className="empty-state">Memuat data petugas...</div>
+          <div className="empty-state">
+            Memuat data petugas...
+          </div>
         ) : staff.length === 0 ? (
           <div className="empty-state">
             Belum ada petugas yang ditugaskan.
@@ -327,7 +324,9 @@ async function loadData() {
                       </div>
                     </td>
 
-                    <td>{item.events?.name || 'Acara tidak tersedia'}</td>
+                    <td>
+                      {item.events?.name || 'Acara tidak tersedia'}
+                    </td>
 
                     <td>
                       <span className="category-badge regular">
