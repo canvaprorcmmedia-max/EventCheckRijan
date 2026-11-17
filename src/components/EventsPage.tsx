@@ -9,7 +9,10 @@ import {
   Power,
   Archive,
   RotateCcw,
-  Trash2
+  Trash2,
+  Copy,
+  ExternalLink,
+  Link2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -20,6 +23,7 @@ type EventItem = {
   event_date: string | null
   location: string | null
   status: 'draft' | 'active' | 'archived'
+  portal_slug: string
   created_at: string
 }
 
@@ -43,7 +47,7 @@ export default function EventsPage({ onEventsChanged }: { onEventsChanged?: () =
 
     const { data, error } = await supabase
       .from('events')
-      .select('id, name, description, event_date, location, status, created_at')
+      .select('id, name, description, event_date, location, status, portal_slug, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -246,6 +250,42 @@ export default function EventsPage({ onEventsChanged }: { onEventsChanged?: () =
     return 'Draft'
   }
 
+  function getPortalUrl(event: EventItem) {
+    return `${window.location.origin}/portal/${encodeURIComponent(event.portal_slug)}`
+  }
+
+  async function handleCopyPortalLink(event: EventItem) {
+    const url = getPortalUrl(event)
+    setError('')
+    setSuccess('')
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setSuccess(`Link Portal untuk "${event.name}" berhasil disalin.`)
+    } catch {
+      // Fallback untuk browser yang tidak memberikan izin Clipboard API.
+      const input = document.createElement('textarea')
+      input.value = url
+      input.setAttribute('readonly', '')
+      input.style.position = 'fixed'
+      input.style.opacity = '0'
+      document.body.appendChild(input)
+      input.select()
+      const copied = document.execCommand('copy')
+      input.remove()
+      if (copied) setSuccess(`Link Portal untuk "${event.name}" berhasil disalin.`)
+      else setError('Link belum dapat disalin otomatis. Silakan salin alamat yang ditampilkan.')
+    }
+  }
+
+  function handleOpenPortal(event: EventItem) {
+    if (event.status === 'archived') {
+      setError('Acara yang diarsipkan tidak dapat membuka Portal Undangan. Pulihkan acara terlebih dahulu.')
+      return
+    }
+    window.open(getPortalUrl(event), '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <section className="events-page">
       <div className="panel">
@@ -387,6 +427,34 @@ export default function EventsPage({ onEventsChanged }: { onEventsChanged?: () =
                         <MapPin size={14} />
                         {event.location || 'Lokasi belum ditentukan'}
                       </span>
+                    </div>
+
+                    <div className="event-portal-link">
+                      <div className="event-portal-link-heading">
+                        <Link2 size={14} />
+                        <strong>Link Portal Undangan</strong>
+                      </div>
+                      <code title={getPortalUrl(event)}>{getPortalUrl(event)}</code>
+                      <div className="event-portal-link-actions">
+                        <button
+                          type="button"
+                          className="btn-secondary event-portal-btn"
+                          onClick={() => void handleCopyPortalLink(event)}
+                        >
+                          <Copy size={14} /> Salin Link
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary event-portal-btn"
+                          onClick={() => handleOpenPortal(event)}
+                          disabled={event.status === 'archived'}
+                        >
+                          <ExternalLink size={14} /> Buka Portal
+                        </button>
+                      </div>
+                      {event.status === 'archived' && (
+                        <small>Acara diarsipkan — pulihkan acara untuk membuka portal.</small>
+                      )}
                     </div>
                   </div>
 

@@ -15,3 +15,6 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/manage-staff/deno.json"
 entrypoint = "./functions/manage-staff/index.ts"
+
+[functions.lookup-invitation]
+verify_jwt = false
