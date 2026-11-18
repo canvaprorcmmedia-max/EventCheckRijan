@@ -1,0 +1,20 @@
+Pembaruan Portal Undangan - Kartu Identitas PNG
+
+Perubahan:
+- Tombol pada hasil pencarian Portal Undangan sekarang mengunduh kartu identitas tamu dalam format PNG.
+- Kartu memuat nama, institusi (jika tersedia), kategori, kelompok tamu (jika tersedia), kode undangan, nama acara, tanggal acara, logo resmi lembaga, logo acara pertama (jika tersedia), dan QR undangan yang sama seperti sebelumnya.
+- URL QR tetap menggunakan token undangan lama pada rute /undangan/; tidak ada perubahan data tamu atau token.
+- QR pada kartu harus tetap diuji dengan scanner petugas sebelum dipakai pada acara sebenarnya.
+
+Pemasangan:
+1. Cadangkan folder proyek Anda.
+2. Ekstrak ZIP ini ke folder proyek yang sudah ada dan izinkan file sumber ditimpa.
+3. Jangan hapus atau timpa file .env.local milik Anda.
+4. Jalankan npm.cmd run build di PowerShell.
+5. Jika build berhasil, jalankan npm.cmd run dev dan uji Portal Undangan.
+6. Uji tombol Unduh Kartu Identitas (PNG), lalu scan QR hasil PNG menggunakan akun petugas.
+7. Setelah pengujian berhasil, baru commit dan push ke GitHub agar Vercel melakukan deployment.
+
+Catatan:
+- Paket ini tidak menyertakan .env, node_modules, .git, atau dist.
+- Logo eksternal hanya dapat dimasukkan ke PNG jika server penyimpanan mengizinkan pemuatan gambar lintas-origin (CORS). Jika logo gagal dimuat, kartu tetap dibuat dan bagian logo akan menggunakan fallback teks.

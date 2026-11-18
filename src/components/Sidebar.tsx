@@ -1,7 +1,7 @@
 
 import {
   LayoutDashboard, ScanLine, Users, ChartNoAxesCombined, CalendarDays,
-  Settings, LogOut, CalendarCheck, X, UserCog
+  Settings, LogOut, X, UserCog
 } from 'lucide-react'
 
 export type Page =
@@ -61,8 +61,8 @@ export default function Sidebar({
 
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">
-            <CalendarCheck size={23} />
+          <div className="brand-mark brand-official-logo">
+            <img src="/rijan-logo.png" alt="Logo resmi Riyadlul Jannah" />
           </div>
 
           <div>

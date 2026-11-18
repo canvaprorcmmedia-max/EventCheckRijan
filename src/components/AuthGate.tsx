@@ -202,7 +202,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <main className="auth-panel">
             <div className="auth-panel-inner">
               <div className="auth-brand">
-                <div className="auth-brand-icon"><CalendarCheck size={25} /></div>
+                <div className="auth-brand-icon auth-official-logo"><img src="/rijan-logo.png" alt="Logo resmi Riyadlul Jannah" /></div>
                 <div><strong>EventCheck<span>Rijan</span></strong><small>EVENT MANAGEMENT SYSTEM</small></div>
               </div>
               <div className="auth-heading">

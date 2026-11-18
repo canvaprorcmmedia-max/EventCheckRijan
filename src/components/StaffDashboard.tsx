@@ -155,6 +155,7 @@ export default function StaffDashboard({
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] =
     useState<AssignedEvent | null>(null)
+  const [selectedEventLogos, setSelectedEventLogos] = useState<Array<{ id: string; name: string; url: string }>>([])
 
   const [scannerOpen, setScannerOpen] = useState(false)
   const [checkInMode, setCheckInMode] = useState<'scan' | 'manual'>('scan')
@@ -219,6 +220,28 @@ export default function StaffDashboard({
   useEffect(() => {
     void loadEvents()
   }, [userId])
+
+  useEffect(() => {
+    let active = true
+    async function loadSelectedEventLogos() {
+      setSelectedEventLogos([])
+      if (!selectedEvent?.id) return
+      const { data, error } = await supabase
+        .from('event_branding_assets')
+        .select('id, display_name, object_path')
+        .eq('event_id', selectedEvent.id)
+        .eq('show_on_invitation', true)
+        .order('sort_order', { ascending: true })
+      if (!active || error || !data) return
+      setSelectedEventLogos(data.map(item => ({
+        id: item.id,
+        name: item.display_name,
+        url: supabase.storage.from('eventcheck-branding').getPublicUrl(item.object_path).data.publicUrl,
+      })))
+    }
+    void loadSelectedEventLogos()
+    return () => { active = false }
+  }, [selectedEvent?.id])
 
   // Pemeriksaan berkala agar dashboard pada sesi lama segera keluar
   // setelah Admin menonaktifkan akun. RLS/RPC tetap menjadi pagar server utama.
@@ -518,8 +541,8 @@ export default function StaffDashboard({
     <div className="staff-dashboard">
       <header className="staff-topbar">
         <div className="staff-brand">
-          <div className="staff-brand-icon">
-            <CalendarCheck size={24} />
+          <div className="staff-brand-icon staff-official-logo">
+            <img src="/rijan-logo.png" alt="Logo resmi Riyadlul Jannah" />
           </div>
           <div>
             <strong>EventCheck<span>Rijan</span></strong>
@@ -644,6 +667,13 @@ export default function StaffDashboard({
                 <span>ACARA DIPILIH</span>
                 <h3>{selectedEvent.name}</h3>
                 <p>{formatDate(selectedEvent.event_date)}</p>
+                {selectedEventLogos.length > 0 && (
+                  <div className="staff-event-logos" aria-label="Logo acara">
+                    {selectedEventLogos.map(logo => (
+                      <img key={logo.id} src={logo.url} alt={logo.name} title={logo.name} />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button

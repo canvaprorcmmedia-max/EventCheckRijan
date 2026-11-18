@@ -1789,3 +1789,127 @@
     flex: 1;
   }
 }
+
+/* IDENTITAS VISUAL RESMI RIYADLUL JANNAH - TEMA HIJAU GLOBAL */
+:root {
+  --rijan-green: #008b5a;
+  --rijan-green-dark: #155b3b;
+  --rijan-green-deep: #10452f;
+  --rijan-green-soft: #eaf5ee;
+  --rijan-green-pale: #f3f8f4;
+  --rijan-teal: #379789;
+  --rijan-text: #173d2b;
+}
+body { background: #f3f8f4; color: var(--rijan-text); }
+.sidebar { background: linear-gradient(180deg,#10452f 0%,#155b3b 100%); }
+.brand-mark.brand-official-logo,.staff-brand-icon.staff-official-logo,.auth-brand-icon.auth-official-logo { background:#fff; padding:3px; overflow:hidden; }
+.brand-official-logo img,.staff-official-logo img,.auth-official-logo img { width:100%;height:100%;object-fit:contain;display:block; }
+.brand strong span,.staff-brand strong span,.auth-brand strong span { color:#79d6a7; }
+.nav-item:hover { background:#1d6848; }
+.nav-item.active { background:#26764f;color:#fff;box-shadow:inset 3px 0 #8de0b2; }
+.nav-item.active svg { color:#b9f0d0; }
+.event-switcher { background:#174f38;border-color:#367657; }
+.event-avatar { background:#e5f4e9;color:#17633f; }
+.help-card { background:#174f38;border-color:#367657; }
+.help-icon { background:#2d7653;color:#d7f3e2; }
+.logout-button { border-color:#367657; }
+.main-area { background:#f3f8f4; }
+.topbar { border-color:#dcebe0; }
+.profile-avatar { background:#e3f3e8;color:#17633f; }
+.event-banner,.staff-welcome { background:linear-gradient(110deg,#10452f,#168456); }
+.event-banner-copy>span,.staff-eyebrow { color:#c2f0d5; }
+.stats-grid .stat-icon.blue,.checkin-icon,.staff-summary-icon,.staff-event-icon,.event-item-icon { background:#e5f4e9;color:#168456; }
+.bar-current,.chart-legend i,.legend-blue { background:#168456; }
+.btn-primary,.auth-submit,.portal-submit { background:#008b5a;border-color:#008b5a; }
+.btn-primary:hover,.auth-submit:hover,.portal-submit:hover { background:#006f48; }
+.text-button { color:#008b5a; }
+.nav-live { color:#b9f0d0;background:#1d6848; }
+.stat-trend,.status-badge.present,.events-success { color:#147347;background:#e7f5eb; }
+.staff-dashboard { background:#f3f8f4; }
+.staff-topbar { border-color:#dcebe0; }
+.staff-selected-event { background:#edf7ef;border-color:#cde6d4; }
+.staff-selected-event span { color:#168456; }
+.staff-event-status.active { color:#147347;background:#e7f5eb; }
+.auth-page { background:linear-gradient(145deg,#e8f4eb,#f7faf7 55%,#e1f0e5); }
+.auth-card { border-color:#dcebe0; }
+.auth-brand-icon { background:#008b5a; }
+.auth-heading>span { color:#008b5a; }
+.auth-input-wrap:focus-within,.form-input:focus,.large-search:focus-within { border-color:#48a879;box-shadow:0 0 0 3px #008b5a14; }
+.auth-role-card.selected { border-color:#168456;background:#f0f8f2; }
+.portal-page { --portal-primary:#008b5a;--portal-secondary:#176b45;--portal-accent:#379789;--portal-background:#eff7f1;--portal-text:#173d2b; }
+.portal-main-card { border-color:#dcebe0; }
+.portal-result-check,.portal-guest-tags span { background:#e7f5eb;color:#147347; }
+.portal-event-meta span { background:#edf7ef; }
+.event-item-status,.status-active { color:#147347; }
+@media (max-width: 900px) { .sidebar { box-shadow:12px 0 35px #0c38244a; } }
+.brand-official-logo { width:48px;height:48px;border-radius:12px; }
+.staff-official-logo { width:48px;height:48px;border-radius:12px; }
+.auth-official-logo { width:54px;height:54px;border-radius:14px; }
+.staff-event-logos { display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap; }
+.staff-event-logos img { width:42px;height:42px;object-fit:contain;background:#fff;border:1px solid #d7eadc;border-radius:9px;padding:4px; }
+/* Komponen aksen yang sebelumnya biru diselaraskan ke identitas hijau. */
+.bar-current,.chart-legend i,.legend-blue,.text-button,.checkin-icon,.step-number,.table-action,
+.btn-primary,.staff-summary-icon,.staff-event-icon,.event-item-icon,.auth-heading>span,
+.auth-submit,.auth-brand-icon,.staff-brand-icon { --tw-ring-color:#008b5a; }
+.bar-current,.chart-legend i,.legend-blue { background:#168456 !important; }
+.text-button,.checkin-icon,.step-number,.table-action,.staff-summary-icon,.staff-event-icon,.event-item-icon { color:#168456 !important; }
+.step-number,.table-action { background:#e7f5eb !important; }
+.btn-primary,.auth-submit { background:#008b5a !important;border-color:#008b5a !important; }
+.btn-primary:hover,.auth-submit:hover { background:#006f48 !important; }
+.category-badge.regular { color:#147347;background:#e7f5eb; }
+.category-badge.committee { color:#147347;background:#e7f5eb; }
+.guest-avatar { background:#e7f5eb;color:#147347; }
+.portal-page { background:#eff7f1 !important; }
+.portal-submit,.portal-download { background:#008b5a !important; }
+.brand-official-logo { width:48px;height:48px;border-radius:12px; }
+.staff-official-logo { width:48px;height:48px;border-radius:12px; }
+.auth-official-logo { width:54px;height:54px;border-radius:14px; }
+.staff-event-logos { display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap; }
+.staff-event-logos img { width:42px;height:42px;object-fit:contain;background:#fff;border:1px solid #d7eadc;border-radius:9px;padding:4px; }
+/* Komponen aksen yang sebelumnya biru diselaraskan ke identitas hijau. */
+.bar-current,.chart-legend i,.legend-blue { background:#168456 !important; }
+.text-button,.checkin-icon,.step-number,.table-action,.staff-summary-icon,.staff-event-icon,.event-item-icon { color:#168456 !important; }
+.step-number,.table-action { background:#e7f5eb !important; }
+.btn-primary,.auth-submit { background:#008b5a !important;border-color:#008b5a !important; }
+.btn-primary:hover,.auth-submit:hover { background:#006f48 !important; }
+.category-badge.regular,.category-badge.committee { color:#147347;background:#e7f5eb; }
+.guest-avatar { background:#e7f5eb;color:#147347; }
+.portal-page { background:#eff7f1 !important; }
+.portal-submit,.portal-download { background:#008b5a !important; }
+
+/* FINAL LOGIN BRAND OVERRIDE — identitas hijau Riyadlul Jannah */
+.auth-hero {
+  background: linear-gradient(145deg, #176b45 0%, #008b5a 56%, #075b3d 100%) !important;
+}
+.auth-hero-glow-one { background: #b8f0d033 !important; }
+.auth-hero-glow-two { background: #a4e7c52b !important; }
+.auth-hero-brand > span:last-child > span { color: #c8f2d9 !important; }
+.auth-eyebrow { color: #d7f6e4 !important; }
+.auth-hero-copy p,.auth-hero-note { color: #e0f6e9 !important; }
+.auth-visual-card-main {
+  color: #168456 !important;
+  background: linear-gradient(145deg, #fff, #edf7f0) !important;
+  box-shadow: 0 24px 55px #06452f55 !important;
+}
+.auth-visual-calendar { color: #168456 !important; }
+.auth-visual-card-top { border-bottom-color: #dcebe0 !important; }
+.auth-visual-card-top span,.auth-visual-lines i { background: #d9eee1 !important; }
+.auth-visual-float { box-shadow: 0 12px 35px #06452f33 !important; }
+.auth-visual-float-top svg,.auth-visual-float-bottom > svg { color: #168456 !important; }
+.auth-visual-avatar { background: #e7f5eb !important;color: #147347 !important; }
+.auth-panel .auth-brand-icon {
+  background: #fff !important;
+  border: 1px solid #dcebe0 !important;
+  box-shadow: 0 8px 18px #008b5a1c !important;
+}
+.auth-panel .auth-heading > span,.auth-form-caption { color: #008b5a !important; }
+.auth-panel .auth-role-card:hover { border-color: #8bc9a7 !important;background: #f6fbf7 !important;box-shadow: 0 7px 20px #16845612 !important; }
+.auth-panel .auth-role-card.selected { border-color: #168456 !important;background: #f0f8f2 !important;box-shadow: 0 0 0 3px #16845610 !important; }
+.auth-panel .auth-role-icon.admin,.auth-panel .auth-role-icon.staff { color: #168456 !important;background: #e7f5eb !important; }
+.auth-role-card.selected .auth-role-radio { border-color: #168456 !important; }
+.auth-panel .auth-input-wrap:focus-within { border-color: #48a879 !important;box-shadow: 0 0 0 3px #008b5a15 !important; }
+.auth-panel .auth-submit { background: #008b5a !important;box-shadow: 0 8px 18px #008b5a2b !important; }
+.auth-panel .auth-submit:hover { background: #006f48 !important; }
+.auth-select-hint { border-color: #cfe6d6 !important;background: #f5faf6 !important; }
+.auth-select-hint svg,.auth-loading { color: #168456 !important; }
+.auth-security svg { color: #168456 !important; }
